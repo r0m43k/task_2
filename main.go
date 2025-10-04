@@ -30,9 +30,9 @@ func (c *Ctx) Exit() int {
 	}
 	for _, e := range c.errs {
 		if e.withLine && e.line > 0 {
-			fmt.Fprintf(os.Stderr, "%s:%d %s\n", c.file, e.line, e.msg)
+			fmt.Fprintf(os.Stdout, "%s:%d %s\n", c.file, e.line, e.msg)
 		} else {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", c.file, e.msg)
+			fmt.Fprintf(os.Stdout, "%s: %s\n", c.file, e.msg)
 		}
 	}
 	return 1
@@ -80,26 +80,26 @@ var (
 func validateResMap(c *Ctx, n *yaml.Node, field string) {
 	m, err := asMap(n)
 	if err != nil {
-		c.L(n.Line, fmt.Sprintf("%s должно быть объектом", field))
+		c.L(n.Line, fmt.Sprintf("%s must be object", field))
 		return
 	}
 	if cpu, ok := m["cpu"]; ok {
 		if cpu.Tag != "!!int" {
-			c.L(cpu.Line, "cpu должно быть целым числом")
+			c.L(cpu.Line, "cpu must be int")
 		}
 	}
 	if mem, ok := m["memory"]; ok {
 		if s, ok := str(mem); !ok {
-			c.L(mem.Line, "memory должно быть строкой")
+			c.L(mem.Line, "memory must be string")
 		} else if !reMem.MatchString(s) {
-			c.L(mem.Line, fmt.Sprintf("memory имеет неверный формат '%s'", s))
+			c.L(mem.Line, fmt.Sprintf("memory has invalid format '%s'", s))
 		}
 	}
 }
 func validateResources(c *Ctx, n *yaml.Node) {
 	m, err := asMap(n)
 	if err != nil {
-		c.L(n.Line, "resources должно быть объектом")
+		c.L(n.Line, "resources must be object")
 		return
 	}
 	if r, ok := m["requests"]; ok {
@@ -112,23 +112,23 @@ func validateResources(c *Ctx, n *yaml.Node) {
 func validatePort(c *Ctx, n *yaml.Node) {
 	m, err := asMap(n)
 	if err != nil {
-		c.L(n.Line, "ports должен быть объектом")
+		c.L(n.Line, "ports must be object")
 		return
 	}
 	if cp, ok := m["containerPort"]; !ok {
-		c.N("containerPort обязателен")
+		c.N("containerPort is required")
 	} else if p, ok := intv(cp); !ok {
-		c.L(cp.Line, "containerPort должно быть целым числом")
+		c.L(cp.Line, "containerPort must be int")
 	} else if !portOK(p) {
-		c.L(cp.Line, "containerPort значение вне допустимого диапазона")
+		c.L(cp.Line, "containerPort value out of range")
 	}
 	if pr, ok := m["protocol"]; ok {
 		if s, ok := str(pr); !ok {
-			c.L(pr.Line, "protocol должно быть строкой")
+			c.L(pr.Line, "protocol must be string")
 		} else {
 			up := strings.ToUpper(s)
 			if up != "TCP" && up != "UDP" {
-				c.L(pr.Line, fmt.Sprintf("protocol имеет неподдерживаемое значение '%s'", s))
+				c.L(pr.Line, fmt.Sprintf("protocol has unsupported value '%s'", s))
 			}
 		}
 	}
@@ -136,68 +136,68 @@ func validatePort(c *Ctx, n *yaml.Node) {
 func validateProbe(c *Ctx, n *yaml.Node, field string) {
 	m, err := asMap(n)
 	if err != nil {
-		c.L(n.Line, fmt.Sprintf("%s должно быть объектом", field))
+		c.L(n.Line, fmt.Sprintf("%s must be object", field))
 		return
 	}
 	hg, ok := m["httpGet"]
 	if !ok {
-		c.N("httpGet обязателен")
+		c.N("httpGet is required")
 		return
 	}
 	hm, err := asMap(hg)
 	if err != nil {
-		c.L(hg.Line, "httpGet должен быть объектом")
+		c.L(hg.Line, "httpGet must be object")
 		return
 	}
 	if p, ok := hm["path"]; !ok {
-		c.N("path обязателен")
+		c.N("path is required")
 	} else if s, ok := str(p); !ok {
-		c.L(p.Line, "path должно быть строкой")
+		c.L(p.Line, "path must be string")
 	} else if !strings.HasPrefix(s, "/") {
-		c.L(p.Line, fmt.Sprintf("path имеет неверный формат '%s'", s))
+		c.L(p.Line, fmt.Sprintf("path has invalid format '%s'", s))
 	}
 	if pn, ok := hm["port"]; !ok {
-		c.N("port обязателен")
+		c.N("port is required")
 	} else if pi, ok := intv(pn); !ok {
-		c.L(pn.Line, "port должно быть целым числом")
+		c.L(pn.Line, "port must be int")
 	} else if !portOK(pi) {
-		c.L(pn.Line, "port значение вне допустимого диапазона")
+		c.L(pn.Line, "port value out of range")
 	}
 }
 func validateContainer(c *Ctx, n *yaml.Node, seen map[string]struct{}) {
 	m, err := asMap(n)
 	if err != nil {
-		c.L(n.Line, "containers должен быть объектом")
+		c.L(n.Line, "containers must be object")
 		return
 	}
 	if nn, ok := m["name"]; !ok {
-		c.N("name обязателен")
+		c.N("name is required")
 	} else if s, ok := str(nn); !ok {
-		c.L(nn.Line, "name должно быть строкой")
+		c.L(nn.Line, "name must be string")
 	} else {
 		if strings.TrimSpace(s) == "" {
-			c.L(nn.Line, "name обязателен")
+			c.L(nn.Line, "name is required")
 			return
 		}
 		if !reSnake.MatchString(s) {
-			c.L(nn.Line, fmt.Sprintf("name имеет неверный формат '%s'", s))
+			c.L(nn.Line, fmt.Sprintf("name has invalid format '%s'", s))
 		}
 		if _, dup := seen[s]; dup {
-			c.L(nn.Line, fmt.Sprintf("name имеет неверный формат '%s'", s))
+			c.L(nn.Line, fmt.Sprintf("name has invalid format '%s'", s))
 		}
 		seen[s] = struct{}{}
 	}
 	if in, ok := m["image"]; !ok {
-		c.N("image обязателен")
+		c.N("image is required")
 	} else if s, ok := str(in); !ok {
-		c.L(in.Line, "image должно быть строкой")
+		c.L(in.Line, "image must be string")
 	} else if !reImage.MatchString(s) {
-		c.L(in.Line, fmt.Sprintf("image имеет неверный формат '%s'", s))
+		c.L(in.Line, fmt.Sprintf("image has invalid format '%s'", s))
 	}
 	if pn, ok := m["ports"]; ok {
 		seq, err := asSeq(pn)
 		if err != nil {
-			c.L(pn.Line, "ports должен быть массивом")
+			c.L(pn.Line, "ports must be array")
 		} else {
 			for _, it := range seq {
 				validatePort(c, it)
@@ -211,7 +211,7 @@ func validateContainer(c *Ctx, n *yaml.Node, seen map[string]struct{}) {
 		validateProbe(c, l, "livenessProbe")
 	}
 	if rn, ok := m["resources"]; !ok {
-		c.N("resources обязателен")
+		c.N("resources is required")
 	} else {
 		validateResources(c, rn)
 	}
@@ -219,47 +219,47 @@ func validateContainer(c *Ctx, n *yaml.Node, seen map[string]struct{}) {
 func validateSpec(c *Ctx, spec *yaml.Node) {
 	m, err := asMap(spec)
 	if err != nil {
-		c.L(spec.Line, "spec должно быть объектом")
+		c.L(spec.Line, "spec must be object")
 		return
 	}
 	if n, ok := m["os"]; ok {
 		switch n.Kind {
 		case yaml.ScalarNode:
 			if s, ok := str(n); !ok {
-				c.L(n.Line, "os должно быть строкой")
+				c.L(n.Line, "os must be string")
 			} else if s != "linux" && s != "windows" {
-				c.L(n.Line, fmt.Sprintf("os имеет неподдерживаемое значение '%s'", s))
+				c.L(n.Line, fmt.Sprintf("os has unsupported value '%s'", s))
 			}
 		case yaml.MappingNode:
 			om, err := asMap(n)
 			if err != nil {
-				c.L(n.Line, "os должно быть объектом")
+				c.L(n.Line, "os must be object")
 			} else {
 				nn, ok := om["name"]
 				if !ok {
-					c.N("name обязателен")
+					c.N("name is required")
 				} else if s, ok := str(nn); !ok {
-					c.L(nn.Line, "name должно быть строкой")
+					c.L(nn.Line, "name must be string")
 				} else if s != "linux" && s != "windows" {
-					c.L(nn.Line, fmt.Sprintf("name имеет неподдерживаемое значение '%s'", s))
+					c.L(nn.Line, fmt.Sprintf("name has unsupported value '%s'", s))
 				}
 			}
 		default:
-			c.L(n.Line, "os должно быть строкой")
+			c.L(n.Line, "os must be string")
 		}
 	}
 	cn, ok := m["containers"]
 	if !ok {
-		c.N("containers обязателен")
+		c.N("containers is required")
 		return
 	}
 	seq, err := asSeq(cn)
 	if err != nil {
-		c.L(cn.Line, "containers должен быть массивом")
+		c.L(cn.Line, "containers must be array")
 		return
 	}
 	if len(seq) == 0 {
-		c.L(cn.Line, "containers значение вне допустимого диапазона")
+		c.L(cn.Line, "containers value out of range")
 		return
 	}
 	seen := map[string]struct{}{}
@@ -270,27 +270,27 @@ func validateSpec(c *Ctx, spec *yaml.Node) {
 func validateMeta(c *Ctx, meta *yaml.Node) {
 	m, err := asMap(meta)
 	if err != nil {
-		c.L(meta.Line, "metadata должно быть объектом")
+		c.L(meta.Line, "metadata must be object")
 		return
 	}
 	if n, ok := m["name"]; !ok {
-		c.N("name обязателен")
+		c.N("name is required")
 	} else if _, ok := str(n); !ok {
-		c.L(n.Line, "name должно быть строкой")
+		c.L(n.Line, "name must be string")
 	}
 	if n, ok := m["namespace"]; ok {
 		if _, ok := str(n); !ok {
-			c.L(n.Line, "namespace должно быть строкой")
+			c.L(n.Line, "namespace must be string")
 		}
 	}
 	if n, ok := m["labels"]; ok {
 		lm, err := asMap(n)
 		if err != nil {
-			c.L(n.Line, "labels должно быть объектом")
+			c.L(n.Line, "labels must be object")
 		} else {
 			for _, v := range lm {
 				if _, ok := str(v); !ok {
-					c.L(v.Line, "labels должно быть строкой")
+					c.L(v.Line, "labels must be string")
 				}
 			}
 		}
@@ -299,30 +299,30 @@ func validateMeta(c *Ctx, meta *yaml.Node) {
 func validateDoc(c *Ctx, doc *yaml.Node) {
 	top, err := asMap(doc)
 	if err != nil {
-		c.L(doc.Line, "spec должно быть объектом")
+		c.L(doc.Line, "spec must be object")
 		return
 	}
 	if n, ok := top["apiVersion"]; !ok {
-		c.N("apiVersion обязателен")
+		c.N("apiVersion is required")
 	} else if s, ok := str(n); !ok {
-		c.L(n.Line, "apiVersion должно быть строкой")
+		c.L(n.Line, "apiVersion must be string")
 	} else if s != "v1" {
-		c.L(n.Line, fmt.Sprintf("apiVersion имеет неподдерживаемое значение '%s'", s))
+		c.L(n.Line, fmt.Sprintf("apiVersion has unsupported value '%s'", s))
 	}
 	if n, ok := top["kind"]; !ok {
-		c.N("kind обязателен")
+		c.N("kind is required")
 	} else if s, ok := str(n); !ok {
-		c.L(n.Line, "kind должно быть строкой")
+		c.L(n.Line, "kind must be string")
 	} else if s != "Pod" {
-		c.L(n.Line, fmt.Sprintf("kind имеет неподдерживаемое значение '%s'", s))
+		c.L(n.Line, fmt.Sprintf("kind has unsupported value '%s'", s))
 	}
 	if n, ok := top["metadata"]; !ok {
-		c.N("metadata обязателен")
+		c.N("metadata is required")
 	} else {
 		validateMeta(c, n)
 	}
 	if n, ok := top["spec"]; !ok {
-		c.N("spec обязателен")
+		c.N("spec is required")
 	} else {
 		validateSpec(c, n)
 	}
@@ -332,23 +332,23 @@ func main() { os.Exit(run(os.Args)) }
 
 func run(args []string) int {
 	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "использование: %s <путь-к-yaml>\n", base(args[0]))
+		fmt.Fprintf(os.Stderr, "usage: %s <path-to-yaml>\n", base(args[0]))
 		return 2
 	}
 	path := args[1]
 	data, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s: не удалось прочитать содержимое файла: %v\n", base(path), err)
+		fmt.Fprintf(os.Stderr, "%s: cannot read file content: %v\n", base(path), err)
 		return 1
 	}
 	var root yaml.Node
 	if err := yaml.Unmarshal(data, &root); err != nil {
-		fmt.Fprintf(os.Stderr, "%s: не удалось разобрать содержимое файла: %v\n", base(path), err)
+		fmt.Fprintf(os.Stderr, "%s: cannot unmarshal file content: %v\n", base(path), err)
 		return 1
 	}
 	ctx := &Ctx{file: base(path)}
 	if len(root.Content) == 0 {
-		ctx.N("spec обязателен")
+		ctx.N("spec is required")
 		return ctx.Exit()
 	}
 	for _, doc := range root.Content {
