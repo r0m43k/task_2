@@ -273,11 +273,15 @@ func validateMeta(c *Ctx, meta *yaml.Node) {
 		c.L(meta.Line, "metadata must be object")
 		return
 	}
+	// name: required string, empty string => "name is required" (with line)
 	if n, ok := m["name"]; !ok {
 		c.N("name is required")
-	} else if _, ok := str(n); !ok {
+	} else if s, ok := str(n); !ok {
 		c.L(n.Line, "name must be string")
+	} else if strings.TrimSpace(s) == "" {
+		c.L(n.Line, "name is required")
 	}
+
 	if n, ok := m["namespace"]; ok {
 		if _, ok := str(n); !ok {
 			c.L(n.Line, "namespace must be string")
@@ -296,6 +300,7 @@ func validateMeta(c *Ctx, meta *yaml.Node) {
 		}
 	}
 }
+
 func validateDoc(c *Ctx, doc *yaml.Node) {
 	top, err := asMap(doc)
 	if err != nil {
